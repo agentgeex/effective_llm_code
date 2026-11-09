@@ -9,7 +9,7 @@
 #
 # 代价（说清楚，别粉饰）：
 #   `uv sync` 会把不在 pyproject.toml 里的包当「多余」删掉。顺序是
-#   「先 uv sync --extra nlp，再跑本脚本」；之后又 sync 就再跑一次。
+#   「先 uv sync --extra core 建好 .venv，再跑本脚本」；之后又 sync 就再跑一次。
 #
 # 用法（在仓库根目录）：
 #   bash tools/install_spacy_models.sh sm     # zh_core_web_sm，约 12MB
@@ -39,9 +39,13 @@ esac
 
 PY="$ROOT/.venv/bin/python"
 if [ ! -x "$PY" ]; then
-    echo "找不到 .venv/bin/python —— 请先在本目录执行：uv sync --extra nlp" >&2
+    echo "找不到 .venv/bin/python —— 请先在本目录执行：uv sync --extra core" >&2
     exit 2
 fi
+
+# 模型只是 spacy 的数据包：没有 spacy 装上也用不了，所以先保证它在。
+echo "==> uv pip install spacy"
+uv pip install --python "$PY" spacy
 
 for u in "${urls[@]}"; do
     echo "==> uv pip install ${u##*/}"

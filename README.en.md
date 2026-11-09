@@ -41,7 +41,7 @@ uv pip install torch
 What each step is for:
 
 1. **Step 1 has zero dependencies.** It uses only the standard library (`asyncio` / `time`), so there is nothing to install first — confirm that the code in this repo really does run on your machine before we talk about environments at all. It runs a hundred work orders three ways (serial, 10-way concurrent, fully concurrent) and quantifies the difference between per-task latency and overall throughput.
-2. **`uv sync` installs nothing by default.** `pyproject.toml` here has `dependencies = []`; every dependency lives in a named group (`core` / `gpu` / `vllm` / `nlp` / `rag` …). Run it without `--extra` and you get an empty environment — and no message telling you it installed nothing.
+2. **`uv sync` installs nothing by default.** `pyproject.toml` here has `dependencies = []`; every dependency lives in a named group (`core` / `gpu` / `vllm` / `rag` / `common` …). Run it without `--extra` and you get an empty environment — and no message telling you it installed nothing.
 3. **For a torch example, add the one package — don't reach for `--extra gpu`.** That group also drags in `onnx` / `onnxruntime` / `optimum` / `bitsandbytes` / `diffusers`: several GB, for one self-attention demo that runs on CPU anyway. Take what you need, when you need it.
 
 To find out what a given file does and how to run it:
@@ -113,6 +113,7 @@ The honest part:
 6. **`outputs/` is not committed**: run an example once and you'll have it. There are no "pre-computed results" in the repo, because the results are supposed to be produced on your machine, by you.
 7. **Eleven examples still lack the six-line header**: `ch02/model_run.py`, `ch02/openai_test.py`, `ch06/rag_hyde_rrf.py`, `ch06/torch_env_check.py`, `ch06/transformers_config.py`, `ch07/function_calling_demo.py`, `ch07/stock_server.py`, `ch07/task_server.py`, `ch07/weather_server.py`, `config/cfg.py`, `ecosystem/gemini_demo/gemini_live_api.py`. They run, but their headers are missing ⑤ the tested interpreter — that can't be guessed, so it waits until each one has actually been run.
 8. **The spaCy Chinese models must be installed by hand, and `uv sync` will delete them.** `zh_core_web_sm` / `zh_core_web_lg` are GitHub Release wheels, not on PyPI. Declaring them in `pyproject.toml` would make **every** `uv sync --extra X` require GitHub access first, because `uv lock` resolves all groups together. They now live in `tools/install_spacy_models.sh`. Order matters: `uv sync` first, then the models; a later sync removes them again, so run the script once more.
+9. **`unsloth` / `trl` / `torchtext` are deliberately absent from extras.** The code does import them (`ch04/unsloth_wt1.py`, `ch06/unsloth_wt1.py`, `ch06/troch_train_c_moe_v1.py`), but they fight with the torch pin in the `gpu` group — declaring them would just make every `--extra gpu` user carry another unbuildable package. To run those examples, install manually per each file's header.
 
 ## 7. License
 

@@ -30,7 +30,7 @@ cases_cv = [
     # 装了之后 video_probe 与 finetune 的预处理脚本都能跑通
     "scikit-learn",
     "opencv-python-headless",
-    # ocr_frames.py 的 OCR 真识别分支：pytesseract 是壳，本体要 apt 装
+    # ch11/cases/video_probe/ocr_frames.py 的 OCR 真识别分支：pytesseract 是壳，本体要 apt 装
     #   sudo apt-get install -y tesseract-ocr tesseract-ocr-chi-sim   （≈15MB，需 root）
     # 缺系统本体时只出「未实现」报告，不会假报成功。
     "pytesseract",
@@ -43,7 +43,7 @@ gpu = [
     "diffusers",
     # 4bit/8bit 量化加载（书 §2.4 load_in_4bit）与 QLoRA 必需；缺了只报 ModuleNotFoundError
     "bitsandbytes",
-    # LoRA/QLoRA 训练（书 11.3 节，cases/finetune/train_lora.py）
+    # LoRA/QLoRA 训练（书 11.3 节，ch11/cases/finetune/train_lora.py）
     "peft",
     # torch.onnx.export 与 onnxruntime 推理（书 §4.4，见 ch04/onnx_*.py）
     # onnxruntime 版本上限见文件末尾 constraint-dependencies
@@ -66,8 +66,6 @@ rag = [
     "langchain-community",
     "langchain-text-splitters",
 ]
-# ch11 cases/stock_agent 的行情采集（fetch_data.py）
-# akshare 走东财/新浪公开接口，yfinance 走 Yahoo —— 两个都**需要外网**，离线环境下这一组必 B
 cases_data = [
     "akshare",
     "yfinance",
@@ -81,36 +79,19 @@ common = [
     "flask",
     "pillow",
     "python-dateutil",
-    # 阶段 2-A 新增：fastapi 示例（fastapi/fastapi_main.py）、tree_sitter 解析示例（parsercode/）
     "fastapi",
     "uvicorn",
     "tree_sitter",
     "tree_sitter_c_sharp",
-    # 阶段 3-A 新增：PDF/文档解析（llm_doc/pymupdf4llm_main.py）
     # 必须 <2：PyPI 上的 pymupdf4llm 2.0 是空壳包（无模块/无依赖/无元数据），装上也 import 不到
     "pymupdf4llm<2",
 ]
-nlp = [
-    "spacy",
-    "jieba3",
-    "jiagu",
-    "pangu",
-    "hanlp_restful",
-    # 阶段 3-A 新增：中文分词（nlp/spacy/pkuseg_t.py、spacy_pkuseg_t.py、temp/intention_t/*pkuseg*.py）
-    # pkuseg 从 sdist 构建，需要 build 环境里有 numpy → 见下方 extra-build-dependencies
-    "pkuseg",
-    # spaCy 中文分词器后端（zh_core_web_sm/lg 的 pkuseg_update_user_dict 依赖它）
-    "spacy-pkuseg",
-    # ── spaCy 官方中文模型不在这里声明，原因见下 ──
-    # zh_core_web_sm（12MB）/ zh_core_web_lg（575MB）都是 github release 的 wheel，
-    # 而 `uv lock` 会把**所有** optional-dependencies 分组一起解析 —— 只要写进任何一组，
-    # 读者即使只想 `uv sync --extra core`（numpy / pandas / openai，全在 PyPI），
-    # 也必须先能访问 github 才拿得到这两个 wheel 的元数据。国内网络这一步常常直接断。
-    # 所以改成手动安装：tools/install_spacy_models.sh
-    # 代价：`uv sync` 会把它们当多余包删掉 —— 顺序是「先 sync，再装模型」；之后又 sync 就再装一次。
-    # 不装 zh_core_web_trf（450MB + spacy-transformers + torch 约 2GB）：那会让 nlp 组
-    # 事实上变成 GPU 依赖，读者要下 3GB，不可接受。用 trf 的示例一律留 B。
-]
+# ── spaCy 中文模型（zh_core_web_sm / zh_core_web_lg）不在 extras 里 ──
+# 它们是 github release 的 wheel（不在 PyPI）。而 `uv lock` 会把**所有**
+# optional-dependencies 分组一起解析 —— 只要写进任何一组，读者即使只想
+# `uv sync --extra core`，也必须先能访问 github 才拿得到它们的元数据。
+# 所以改成手动安装：tools/install_spacy_models.sh（用法见 ENV_MATRIX §9）。
+# 注意：`uv sync` 会把不在本文件里的包当多余删掉，顺序是「先 sync，再装模型」。
 # ecosystem/ 目录下对应书稿第 6 章「技术生态」与第 9 章 Agent 框架的示例
 # accelerate 不放这里：它依赖 torch，跟随 gpu 组
 ecosystem = [
@@ -118,9 +99,9 @@ ecosystem = [
     "dspy",
     "langgraph",
     "crewai",
-    # 统一多模型调用层（书 7.1.4 节；openai/litellm_t/ 下示例依赖）
+    # 统一多模型调用层（书 7.1.4 节；ch07/function_calling_demo.py 用它）
     "litellm",
-    # 模型评测（书 5.3.4 节；evalscope_1/train.py 依赖）
+    # 模型评测（书 5.3.4 节）
     "evalscope",
     # 火山方舟 SDK（common/gpt/volcengine.py）；缺 AK/SK 时脚本报
     # AssertionError: you need to support api_key or ak&sk —— 属 B，不是缺包
@@ -142,13 +123,10 @@ package = false
 constraint-dependencies = [
     "onnxruntime<1.24",
     # ── 三条硬约束（详见 ENV_MATRIX.md §8.5）──
-    # transformers 5.x 删了 AutoModelForVision2Seq，model/model_parser*.py 三个文件直接 ImportError
+    # transformers 5.x 删了 AutoModelForVision2Seq，ch04/model_parser_c.py 直接 ImportError
     "transformers<5",
     # transformers 4.x 要求 huggingface-hub>=0.34,<1.0；升到 2.x 会让 transformers 起不来
     "huggingface-hub<1.0",
     # diffusers 0.42 要 hub>=1.0（resolve_revision），与上面冲突 → diffusers 示例保持 B，
     # 要跑就单开 venv，别为了它把 transformers 拖下水
 ]
-# pkuseg 是 sdist 包（0.0.25），构建时要 import numpy；只加 --no-build-isolation 不够友好，
-# 这里把 numpy 塞进它的构建环境，让 `uv sync --extra nlp` 能直接装。
-extra-build-dependencies = { pkuseg = ["numpy"] }

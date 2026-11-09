@@ -41,7 +41,7 @@ uv pip install torch
 三步各自在干什么：
 
 1. **第 1 步零依赖。** 它只用标准库 `asyncio` / `time`，所以不用等任何安装 —— 先确认「这个仓库的代码在我机器上真的跑得动」，再谈装环境。它会把 100 张工单分别用串行、并发 10、全并发跑一遍，直接把「单任务延迟」和「整体吞吐量」的差别量化出来。
-2. **`uv sync` 默认不装任何东西。** 本仓库 `pyproject.toml` 的 `dependencies = []`，依赖全部放在命名分组里（`core` / `gpu` / `vllm` / `nlp` / `rag` …）。不点名 `--extra`，它只会建一个空环境，而且不会告诉你它什么都没装。
+2. **`uv sync` 默认不装任何东西。** 本仓库 `pyproject.toml` 的 `dependencies = []`，依赖全部放在命名分组里（`core` / `gpu` / `vllm` / `rag` / `common` …）。不点名 `--extra`，它只会建一个空环境，而且不会告诉你它什么都没装。
 3. **跑 torch 示例只补一个包，别开 `--extra gpu`。** gpu 组会把 `onnx` / `onnxruntime` / `optimum` / `bitsandbytes` / `diffusers` 一起拖下来，几个 GB —— 为了一个在 CPU 上就能跑完的自注意力示例，不值。缺什么装什么。
 
 想知道某个文件是干什么、怎么跑：
@@ -113,6 +113,7 @@ python ch03/api_call_deepseek.py
 6. **`outputs/` 不入库**：自己跑一遍就有了。仓库里没有「已经跑好的结果」，因为结果应该由你在你的机器上产生。
 7. **还有 11 个示例没补齐六行文件头**：`ch02/model_run.py`、`ch02/openai_test.py`、`ch06/rag_hyde_rrf.py`、`ch06/torch_env_check.py`、`ch06/transformers_config.py`、`ch07/function_calling_demo.py`、`ch07/stock_server.py`、`ch07/task_server.py`、`ch07/weather_server.py`、`config/cfg.py`、`ecosystem/gemini_demo/gemini_live_api.py`。它们能跑，但头里缺 ⑤ 实测解释器 —— 这个不能靠猜，等逐个真跑过再补。
 8. **spaCy 中文模型要手动装，而且会被 `uv sync` 删掉。** `zh_core_web_sm` / `zh_core_web_lg` 是 GitHub Release 的 wheel（不在 PyPI）。写进 `pyproject.toml` 的话，因为 `uv lock` 会把所有分组一起解析，**任何**一次 `uv sync --extra X` 都变成「先得能访问 GitHub」。所以它们被移到了 `tools/install_spacy_models.sh`。顺序是「先 `uv sync`，再装模型」；之后再 sync 又没了，重装一次即可。
+9. **`unsloth` / `trl` / `torchtext` 没进 extras，是故意的。** 代码里确实 import 了它们（`ch04/unsloth_wt1.py`、`ch06/unsloth_wt1.py`、`ch06/troch_train_c_moe_v1.py`），但它们与 `gpu` 组里钉住的 torch 版本互相打架 —— 加进去只会让所有装 `--extra gpu` 的人多背一个装不干净的包。要跑这几个示例，按各自文件头手动装。
 
 ## 七、许可
 

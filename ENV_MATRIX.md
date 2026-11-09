@@ -544,8 +544,10 @@ bash tools/install_spacy_models.sh both    # 两个都装
 ```
 
 **顺序很重要**（不粉饰）：`uv sync` 会把不在 `pyproject.toml` 里的包当成「多余」删掉。
-所以是「**先** `uv sync --extra nlp`，**再**跑上面的脚本」。之后任何一次 `uv sync` 都会把模型删掉，
+所以是「**先**建环境，**再**跑上面的脚本」。之后任何一次 `uv sync` 都会把模型删掉，
 重跑一次脚本即可。
+
+脚本会先 `uv pip install spacy`（模型只是 spacy 的数据包，没有 spacy 装了也用不上），再装模型本身。
 
 校验装没装上：
 
@@ -554,4 +556,23 @@ bash tools/install_spacy_models.sh both    # 两个都装
 ```
 
 > **现状**：扫全仓 82 个 `.py`，**没有任何示例 `import spacy`**。
-> 所以这一步现在谁都不必跑 —— 保留它，是因为 `nlp` 分组本身还在，这两个模型是旧依赖声明的遗留。
+> 所以这一步现在谁都不必跑。保留这个脚本，只是为了让「将来真要用」时有个不用翻墙的命令可抄 ——
+> 依赖声明那边已经不再提 spaCy 了。
+
+---
+
+## 10. `unsloth` / `trl` / `torchtext`：**故意不写进 extras**
+
+反过来的一类问题：代码里 import 了，但 `pyproject.toml` 里没有声明。
+
+| 包 | 用它的文件 | 为什么不做进 extras |
+|---|---|---|
+| `unsloth` | `ch06/unsloth_wt1.py`、`ch04/unsloth_wt1.py` | 它对 torch 版本有强绑定，与 `gpu` 组里钉住的 torch 相互打架 |
+| `trl` | 同上两个文件 | 同上 |
+| `torchtext` | `ch06/troch_train_c_moe_v1.py` | 该文件自己的注释就写着 ABI 不匹配、`undefined symbol` |
+
+**决定：不声明。** 理由很直接 —— 这两个 `unsloth_wt1.py` 本来就是 B（文件头写着本轮未能跑通），
+把它们塞进 `gpu` 组，等于让所有 `uv sync --extra gpu` 的读者为一个多半跑不起来的示例，
+多背一个版本冲突的包，甚至把整个 `gpu` 组拖到装不上。
+
+要跑这几个示例，按各自文件头的说明手动装。**说清楚比假装声明了更有用。**

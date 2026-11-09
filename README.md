@@ -120,7 +120,7 @@ uv sync --all-extras
 6. **`outputs/` 不入库**：自己跑一遍就有了。仓库里没有「已经跑好的结果」，因为结果应该由你在你的机器上产生。
 7. **还有 11 个示例没补齐六行文件头**：`ch02/model_run.py`、`ch02/openai_test.py`、`ch06/rag_hyde_rrf.py`、`ch06/torch_env_check.py`、`ch06/transformers_config.py`、`ch07/function_calling_demo.py`、`ch07/stock_server.py`、`ch07/task_server.py`、`ch07/weather_server.py`、`config/cfg.py`、`ecosystem/gemini_demo/gemini_live_api.py`。它们能跑，但头里缺 ⑤ 实测解释器 —— 这个不能靠猜，等逐个真跑过再补。
 8. **spaCy 中文模型要手动装，而且会被 `uv sync` 删掉。** `zh_core_web_sm` / `zh_core_web_lg` 是 GitHub Release 的 wheel（不在 PyPI）。写进 `pyproject.toml` 的话，因为 `uv lock` 会把所有分组一起解析，**任何**一次 `uv sync`（包括 `--all-extras`）都变成「先得能访问 GitHub」。所以它们被移到了 `tools/install_spacy_models.sh`。顺序是「先 `uv sync`，再装模型」；之后再 sync 又没了，重装一次即可。
-9. **82 个文件里，只有 32 个能在这台机器上真跑出结果。** 这个数字不含辩解：24 个直接跑通、7 个用文件头写的参数（`--mock` / `--stub` / 子命令）跑通、1 个常驻服务探活通过。其余 50 个：25 个缺 key / 缺权重 / 缺外部服务 / 缺包 / 驱动太老，1 个是代码配的是旧版 torch 的导出 API，2 个本来就是示意代码，22 个是 `common/` 和 `config/` 下的库模块（没有 `__main__`，不是可执行脚本）。逐条见 [EXAMPLES_STATUS.md](EXAMPLES_STATUS.md)。
+9. **82 个文件里，只有 33 个能在这台机器上真跑出结果。** 这个数字不含辩解：25 个直接跑通、7 个用文件头写的参数（`--mock` / `--stub` / 子命令）跑通、1 个常驻服务探活通过。其余 49 个：24 个缺 key / 缺权重 / 缺外部服务 / 缺包 / 驱动太老，1 个缺前置产物，2 个本来就是示意代码，22 个是 `common/` 和 `config/` 下的库模块（没有 `__main__`，不是可执行脚本）。逐条见 [EXAMPLES_STATUS.md](EXAMPLES_STATUS.md)。
 10. **`unsloth` / `trl` / `torchtext` 没进 extras，是故意的。** 代码里确实 import 了它们（`ch04/unsloth_wt1.py`、`ch06/unsloth_wt1.py`、`ch06/troch_train_c_moe_v1.py`），但它们与 `gpu` 组里钉住的 torch 版本互相打架 —— 加进去只会让每一个 `uv sync --all-extras` 的人都卡在装不上。要跑这几个示例，按各自文件头手动装。
 
 ## 七、许可

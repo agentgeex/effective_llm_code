@@ -55,3 +55,7 @@ compiled_*
 *.jpg
 *.jpeg
 !**/assets/**
+
+# 验证跑批产生的中间数据（读一遍就会重建，不该进版本库）
+ch11/cases/finetune/data/
+ch11/cases/video_probe/data/

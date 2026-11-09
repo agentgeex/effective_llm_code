@@ -49,6 +49,9 @@ gpu = [
     # onnxruntime 版本上限见文件末尾 constraint-dependencies
     "onnx",
     "onnxruntime",
+    # torch >= 2.11 的 torch.onnx.export 强制 import onnxscript；缺它 ch04/onnx_export_min.py
+    # 在单一环境里直接 ModuleNotFoundError（torch 2.6 时代这一步是可选的）
+    "onnxscript",
     # ch04/onnx_m.py 要 optimum 的 ORT 执行器
     # ⚠️ 但 optimum[onnxruntime] 依赖 huggingface-hub>=1.0，与 transformers 4.x 的 <1.0 冲突
     #    → 这 3 个脚本在本环境仍是 B（ImportError: cannot import name 'resolve_revision'）

@@ -30,14 +30,15 @@
 | 🌐 需要外网下载 | 2 |
 | 🌐 缺外部服务 | 1 |
 | 🖥 缺驱动/系统组件 | 2 |
-| 📚 缺包（extras 里没有） | 5 |
+| 📚 缺包（extras 里没有） | 4 |
+| 🐞 代码与当前 API 不匹配 | 1 |
 | 🧱 缺前置产物 | 1 |
 | 🧩 库模块（非可执行脚本） | 17 |
 | 🧩 库模块（import 需外部条件） | 5 |
 | **合计** | **82** |
 
 能真正跑出结果的：**32** 个（✅ 跑通 24 + 用文档参数 7 + 常驻服务探活 1）。
-剩下 50 个里，26 个是**环境/凭证不够**，2 个是**本来就是示意代码**，22 个是**库模块、不是可执行脚本**。
+剩下 50 个里，25 个是**环境/凭证不够**，1 个是**代码配的是旧版 torch 的 API**，2 个是**本来就是示意代码**，22 个是**库模块、不是可执行脚本**。
 
 ### 三种「没跑通」必须分清
 
@@ -70,8 +71,8 @@
 | `ch04/model_architectures.py` | `2` | 📦 缺模型权重 | `bert\|gpt\|t5` → 裸跑 rc=2 要子命令；子命令要 bert-base-chinese / Qwen2.5 / t5 权重（要外网） |
 | `ch04/model_parser_c.py` | `1` | 📦 缺模型权重 | 模型路径仍是占位 `/path/to/your/motogpt/...` |
 | `ch04/model_run.py` | `1` | 📦 缺模型权重 | 模型路径仍是占位 `/path/to/your/motogpt/...` |
-| `ch04/onnx_export_min.py` | `2` | 📚 缺包（extras 里没有） | `export` → torch 2.11 的 ONNX 导出需要 `onnxscript`，extras 里没有 → ModuleNotFoundError |
-| `ch04/onnx_m.py` | `1` | 📚 缺包（extras 里没有） | optimum 2.3.0 已把 ORT 拆成独立包，`optimum.onnxruntime` 不存在 |
+| `ch04/onnx_export_min.py` | `1` | 🐞 缺包（已补）/ 代码问题（待定） | `export` → 补上 `onnxscript` 后不再 ImportError，改报 `ValueError: conflicts between user-specified ranges and inferred ranges … Dim.DYNAMIC … inputs['input_ids'].shape[1]`：torch 2.9 起默认走 dynamo 导出，不再接受 `dynamic_axes`。加一行 `dynamo=False` 即可导出成功（已在 /tmp 副本验证 rc=0），但**没有改仓库文件**，等定。详见文末「需要你知道的两件事」 |
+| `ch04/onnx_m.py` | `1` | 📚 缺包（**故意不补**） | `optimum` 2.3 把 ONNX Runtime 执行器拆成了独立包；装它要 `huggingface-hub>=1.0`，与 `transformers<5` 冲突。保持 `transformers<5` 优先 |
 | `ch04/safetensors_read.py` | `0` | ✅ 跑通 | 自造 safetensors 文件并 mmap 读回，tensor (8,8)，临时目录自清 |
 | `ch04/transformer_min.py` | `0` | ✅ 跑通 | 手写单头自注意力，CPU 跑完（本机 CUDA 不可用） |
 | `ch04/unsloth_wt1.py` | `1` | 📚 缺包（extras 里没有） | 缺 unsloth；按设计不进 extras（与 gpu 组 torch 打架） |
@@ -250,18 +251,58 @@ NVIDIA 驱动 **≥ 580**；本机 550.90.07 只能到 CUDA 12.4。结果：所�
 
 ## 需要你知道的两件事
 
-1. **`onnxscript` 没被声明。** `torch 2.11` 起，`torch.onnx.export` 强制要求 `onnxscript`，
-   而 `ch04/onnx_export_min.py` 的依赖清单里只有 torch/onnx/onnxruntime/numpy。
-   在单一环境里它就是 `ModuleNotFoundError: No module named 'onnxscript'`。
-   **这一轮没改代码、也没加依赖** —— 是否往 `gpu` 组补一个 `onnxscript`，等你定。
-2. **`ch04/onnx_m.py` 撞的是 optimum 拆包。** optimum 2.3.0 把 ONNX Runtime 后端
-   拆成了独立发行包，`from optimum.onnxruntime import ...` 不再存在。
-   这个示例在本环境是 B（要给 `optimum` 加 onnxruntime 后端），改不改都说得过去。
+### 1. `ch04/onnx_export_min.py`：补了包，但还没跑通，卡在 torch 换了默认导出器
+
+改前（`gpu` 组里没有 `onnxscript`）：
+
+```
+ModuleNotFoundError: No module named 'onnxscript'          → rc=1
+```
+
+补上 `onnxscript` 之后，ImportError 没了，但撞到下一层 —— torch 2.9 起
+`torch.onnx.export` 默认换成 dynamo 导出器，**不再接受 `dynamic_axes` 这种老式写法**：
+
+```
+ValueError: Found the following conflicts between user-specified ranges and
+inferred ranges from model tracing:
+- Received user-specified dim hint Dim.DYNAMIC(min=None, max=None), but tracing
+  inferred a static shape of 50 for dimension inputs['input_ids'].shape[1].
+                                                                   → rc=1
+```
+
+这不是环境缺东西，是**文件里的导出写法配的是 torch 2.6 那套 API**。加一行
+`dynamo=False` 退回旧（TorchScript）导出器就能过 —— 我在 `/tmp` 的副本上验证过：
+
+```
+ONNX 模型已导出: /tmp/text_classifier.onnx     （11 MB）
+infer → 输出 shape: (1, 5)                     → rc=0
+```
+
+⚠️ **仓库文件没有动。** 改不改 `ch04/onnx_export_min.py` 是另一个决定，等定。
+
+顺带一个发现：文件头里写的校验命令 `python -m onnx.checker text_classifier.onnx`
+在 onnx 1.23 上**什么都不检查**（给一个不存在的路径也是 rc=0，只吐一行 runpy 警告）。
+这条命令的校验作用是假的，别拿它当证据。
+
+### 2. `ch04/onnx_m.py`：这个「缺包」是**故意不补**的
+
+`optimum` 2.3 把 ONNX Runtime 执行器拆成了独立发行包，`from optimum.onnxruntime import ...`
+不再存在。要补就得装 `optimum[onnxruntime]`，而它要求 `huggingface-hub>=1.0` ——
+与 `transformers<5` 这条硬约束直接打架。
+
+**选择：保 `transformers<5`。** 理由很直白：transformer 是全书主线，ONNX 执行器只是一个示例。
+不能为了一个 B 级示例，把整个大环境的基础前提换掉。
+
+所以这一行永远是「缺包」，不是没装好。要跑它，自己单开一个 venv。
 
 ## 关于「代码 bug」
 
-**没有发现真正的代码 bug。** 82 个文件里没有一个是「逻辑写错导致跑不出来」。
+**一个：`ch04/onnx_export_min.py`** —— 不是逻辑写错，是**写法配的是 torch 2.6 那套 API**：
+`torch.onnx.export(..., dynamic_axes=...)` 在 torch 2.9+ 的默认 dynamo 导出器下会被拒。
+补 `dynamo=False` 即可（`/tmp` 副本实测 rc=0），但仓库文件未动，等决定。见上一节。
 
-唯一值得提一句的写法：`common/db/redis/redistest.py:5` 是 `from Redis import Redis`，
+另外 81 个文件没有「逻辑写错导致跑不出来」的问题。
+
+顺带一提的写法（不算 bug）：`common/db/redis/redistest.py:5` 是 `from Redis import Redis`，
 依赖「文件同目录在 `sys.path` 上」。用 `PYTHONPATH=.` 从仓库根导入就会报
-`No module named 'Redis'`。这是老仓的导入习惯，不是逻辑错误，按原样保留。
+`No module named 'Redis'`。老仓的导入习惯，按原样保留。

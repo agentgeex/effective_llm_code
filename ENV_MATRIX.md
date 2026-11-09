@@ -13,6 +13,8 @@ uv sync --all-extras
 （`transformers<5` / `huggingface-hub<1.0` / `onnxruntime<1.24`）。
 **唯一需要另开环境的是 `unsloth` / `trl` / `torchtext`**，理由见 §10。
 
+装完每个文件到底能不能跑：见仓库根目录的 [EXAMPLES_STATUS.md](EXAMPLES_STATUS.md)。
+
 > ⚠️ 大环境里 `vllm` 会把 torch 定到 CUDA 13 构建（实测 `2.11.0+cu130`），
 > **GPU 需要 NVIDIA 驱动 ≥ 580**。驱动更老时 `torch.cuda.is_available()` 为 `False`，
 > GPU 示例跑不了，纯 CPU 示例不受影响。
@@ -338,6 +340,7 @@ git ls-files -z                     # 取全量（-z 处理中文路径）
 `INDEX.md` 里它们是 A 级（真跑通过），但当时用的是带 `peft` / `scikit-learn` 的专用环境，
 **那个环境现在不在**。按当前四个解释器判，它们「四个都不行」。
 两个说法都对，区别是「曾经能跑」与「现在这台机器上能跑」。读者要跑得自己补 `peft`/`sklearn`。
+
 
 ---
 

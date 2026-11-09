@@ -75,6 +75,7 @@ python ch03/api_call_deepseek.py
 ├── ecosystem/             ecosystem demos (DSPy, Gemini Live)
 ├── tools/                 manual install scripts (spaCy Chinese models, see ENV_MATRIX §9)
 ├── INDEX.md               chapter ↔ file mapping (the most useful table in this repo)
+├── EXAMPLES_STATUS.md     which of the 82 files actually run (real exit codes)
 ├── ENV_MATRIX.md          dependency groups, and the author's original measurements
 └── pyproject.toml         dependency declarations
 ```
@@ -84,6 +85,7 @@ python ch03/api_call_deepseek.py
 Two steps:
 
 1. Open [INDEX.md](INDEX.md), find the file under your chapter — one line per file, describing what it does.
+2. Check [EXAMPLES_STATUS.md](EXAMPLES_STATUS.md) for that file's real exit code before you spend time debugging your setup.
 
 Most `.py` files also carry this six-line header, so you can just read the file:
 
@@ -104,6 +106,8 @@ Version conflicts are pinned where they belong, in `pyproject.toml` (`constraint
 
 **One known exception**: `unsloth` / `trl` / `torchtext` are not in this environment, because the torch they require directly conflicts with the one `vllm` requires. The three examples that use them (`ch04/unsloth_wt1.py`, `ch06/unsloth_wt1.py`, `ch06/troch_train_c_moe_v1.py`) need a separate environment, installed per each file's header.
 
+Once installed, whether a given file actually runs is recorded in **[EXAMPLES_STATUS.md](EXAMPLES_STATUS.md)** — real exit codes for all 82 files, not guesses.
+
 ## 6. Known limitations
 
 The honest part:
@@ -116,7 +120,7 @@ The honest part:
 6. **`outputs/` is not committed**: run an example once and you'll have it. There are no "pre-computed results" in the repo, because the results are supposed to be produced on your machine, by you.
 7. **Eleven examples still lack the six-line header**: `ch02/model_run.py`, `ch02/openai_test.py`, `ch06/rag_hyde_rrf.py`, `ch06/torch_env_check.py`, `ch06/transformers_config.py`, `ch07/function_calling_demo.py`, `ch07/stock_server.py`, `ch07/task_server.py`, `ch07/weather_server.py`, `config/cfg.py`, `ecosystem/gemini_demo/gemini_live_api.py`. They run, but their headers are missing ⑤ the tested interpreter — that can't be guessed, so it waits until each one has actually been run.
 8. **The spaCy Chinese models must be installed by hand, and `uv sync` will delete them.** `zh_core_web_sm` / `zh_core_web_lg` are GitHub Release wheels, not on PyPI. Declaring them in `pyproject.toml` would make **every** `uv sync` (including `--all-extras`) require GitHub access first, because `uv lock` resolves all groups together. They now live in `tools/install_spacy_models.sh`. Order matters: `uv sync` first, then the models; a later sync removes them again, so run the script once more.
-9. **Only 32 of the 82 files actually produce a result on this machine.** No hedging in that number: 24 run outright, 7 run with the arguments their headers document (`--mock` / `--stub` / a subcommand), 1 is a long-running service verified by probing it. Of the other 50: 26 lack a key, weights, an external service, a package, or a new enough driver; 2 are illustrative code by design; 22 are library modules under `common/` and `config/` with no `__main__`.
+9. **Only 32 of the 82 files actually produce a result on this machine.** No hedging in that number: 24 run outright, 7 run with the arguments their headers document (`--mock` / `--stub` / a subcommand), 1 is a long-running service verified by probing it. Of the other 50: 26 lack a key, weights, an external service, a package, or a new enough driver; 2 are illustrative code by design; 22 are library modules under `common/` and `config/` with no `__main__`. Row by row in [EXAMPLES_STATUS.md](EXAMPLES_STATUS.md).
 10. **`unsloth` / `trl` / `torchtext` are deliberately absent from extras.** The code does import them (`ch04/unsloth_wt1.py`, `ch06/unsloth_wt1.py`, `ch06/troch_train_c_moe_v1.py`), but they fight with the torch pin in the `gpu` group — declaring them would break `uv sync --all-extras` for everyone. To run those examples, install manually per each file's header; [ENV_MATRIX.md](ENV_MATRIX.md) §10 keeps the evidence behind that decision.
 
 ## 7. License

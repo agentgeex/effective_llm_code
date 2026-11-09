@@ -522,3 +522,36 @@ $ python（需 vllm 的环境） -c "import vllm,torch;print(vllm.__version__,to
 **结论**：要跑 vLLM，必须 `vllm 0.8.5 + torch 2.6.0+cu124 + transformers 4.51.3` 这三件套一起锁；
 `venv-gpu` 里的 transformers 4.57.6 不能动（vllm 要 4.51.x，二者不能共存）。
 这也是为什么 **vllm 必须独立 venv**，不是洁癖。
+
+---
+
+## 9. spaCy 中文模型：手动装，不在 `pyproject.toml` 里
+
+`zh_core_web_sm`（约 12MB）和 `zh_core_web_lg`（约 575MB）是 **GitHub Release 的 wheel**，不在 PyPI。
+
+它们原本声明在 `pyproject.toml` 的 `nlp` / `nlp-model` 两个 extra 里。问题出在：
+**`uv lock` 会把所有 `optional-dependencies` 分组一起解析**，不管你实际要装哪一组。
+于是读者只想 `uv sync --extra core`（numpy / pandas / openai，全在 PyPI），
+也必须先能访问 GitHub 才拿得到这两个 wheel 的元数据 —— 国内网络这一步常常直接断，
+`uv sync` 只会给你一句 70 秒左右超时，看不出问题出在一个你根本没要装的包上。
+
+所以它们被移出 `pyproject.toml`，改成手动装：
+
+```bash
+bash tools/install_spacy_models.sh sm      # zh_core_web_sm，约 12MB
+bash tools/install_spacy_models.sh lg      # zh_core_web_lg，约 575MB
+bash tools/install_spacy_models.sh both    # 两个都装
+```
+
+**顺序很重要**（不粉饰）：`uv sync` 会把不在 `pyproject.toml` 里的包当成「多余」删掉。
+所以是「**先** `uv sync --extra nlp`，**再**跑上面的脚本」。之后任何一次 `uv sync` 都会把模型删掉，
+重跑一次脚本即可。
+
+校验装没装上：
+
+```bash
+.venv/bin/python -c "import spacy; print(spacy.load('zh_core_web_sm').meta['version'])"
+```
+
+> **现状**：扫全仓 82 个 `.py`，**没有任何示例 `import spacy`**。
+> 所以这一步现在谁都不必跑 —— 保留它，是因为 `nlp` 分组本身还在，这两个模型是旧依赖声明的遗留。

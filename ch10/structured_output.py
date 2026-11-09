@@ -19,8 +19,8 @@
    - 包：零（标准库 json / re）
    - 服务：无。不需要 API key
 
-⑤ 实测解释器 + 日期
-   python（Python 3.10.12）· 
+⑤ 实测解释器
+   python（Python 3.10.12）
    实测 rc=0，输出（原样）：
        [1] 纯 JSON                   → OK   {'action': 'call_api', 'params': {'url': '/ping'}}
        [2] ```json 围栏               → 💥 书稿版解析失败：模型输出无法解析为 JSON，触发重试

@@ -73,6 +73,7 @@ python ch03/api_call_deepseek.py
 ├── common/                shared modules reused across chapters (database, logging, GPT wrappers, etc.)
 ├── config/                config loading (real values are never committed — example file only)
 ├── ecosystem/             ecosystem demos (DSPy, Gemini Live)
+├── tools/                 manual install scripts (spaCy Chinese models, see ENV_MATRIX §9)
 ├── INDEX.md               chapter ↔ file mapping (the most useful table in this repo)
 ├── ENV_MATRIX.md          four interpreters / per-file dependency measurements
 └── pyproject.toml         dependency declarations
@@ -111,6 +112,7 @@ The honest part:
 5. **Parameters, thresholds and domain data in the examples are illustrative.** Don't use them as production configuration or as operating procedures.
 6. **`outputs/` is not committed**: run an example once and you'll have it. There are no "pre-computed results" in the repo, because the results are supposed to be produced on your machine, by you.
 7. **Eleven examples still lack the six-line header**: `ch02/model_run.py`, `ch02/openai_test.py`, `ch06/rag_hyde_rrf.py`, `ch06/torch_env_check.py`, `ch06/transformers_config.py`, `ch07/function_calling_demo.py`, `ch07/stock_server.py`, `ch07/task_server.py`, `ch07/weather_server.py`, `config/cfg.py`, `ecosystem/gemini_demo/gemini_live_api.py`. They run, but their headers are missing ⑤ the tested interpreter — that can't be guessed, so it waits until each one has actually been run.
+8. **The spaCy Chinese models must be installed by hand, and `uv sync` will delete them.** `zh_core_web_sm` / `zh_core_web_lg` are GitHub Release wheels, not on PyPI. Declaring them in `pyproject.toml` would make **every** `uv sync --extra X` require GitHub access first, because `uv lock` resolves all groups together. They now live in `tools/install_spacy_models.sh`. Order matters: `uv sync` first, then the models; a later sync removes them again, so run the script once more.
 
 ## 7. License
 

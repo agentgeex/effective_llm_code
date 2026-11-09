@@ -19,7 +19,7 @@
    权重：无
    ⚠️ 系统 /usr/bin/python3 不行 —— 它的 openai 真 import 失败（缺 sniffio），见 ENV_MATRIX §1
 
-⑤ 实测解释器 + 日期
+⑤ 实测解释器
    实测解释器：<仓库根>/.venv-core/bin/python（openai 3.40.0）
    实测结果：❌ 未跑通 —— 本机没有 DEEPSEEK_API_KEY（`env | grep DEEPSEEK` 为空）
       · 无 key：rc=2，输出「缺少环境变量 DEEPSEEK_API_KEY（书稿 §3.1：绝不硬编码 key）」

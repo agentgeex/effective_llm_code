@@ -28,7 +28,7 @@
         那需要能连 huggingface.co（本机直连超时，见 ENV_MATRIX §6）。
    服务：无
 
-⑤ 实测解释器 + 日期
+⑤ 实测解释器
    实测解释器：python（需 onnxruntime + torch 的环境）（torch 2.6.0+cpu / transformers 4.57.6 /
               accelerate 1.15.0）
    实测结果：✅ 跑通（rc=0，CPU，0.5B，stderr 为空；输出原文，未改写）

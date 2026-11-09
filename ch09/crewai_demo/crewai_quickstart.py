@@ -18,8 +18,8 @@
    - 包：crewai（本机实测 1.6.1）
    - 服务：OPENAI_API_KEY（或通过 llm= 指定其他模型）；无 key 走 --dry-run
 
-⑤ 实测解释器 + 日期
-   python（Python 3.10.12 / crewai 1.6.1）· 
+⑤ 实测解释器
+   python（Python 3.10.12 / crewai 1.6.1）
    实测：--dry-run rc=0；无 key 直跑 rc=2（按设计给出提示）；真 kickoff 未跑（缺 OPENAI_API_KEY）
 
 ⑥ 与书稿的差异

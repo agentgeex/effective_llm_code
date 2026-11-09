@@ -14,8 +14,8 @@
    - 包：langgraph（本机实测可 import，版本号未打印）、langchain-core（langgraph 的传递依赖）
    - 无外部服务、无 API key、无权重、无 GPU
 
-⑤ 实测解释器 + 日期
-   python（Python 3.10.12）· 
+⑤ 实测解释器
+   python（Python 3.10.12）
    实测：rc=0，think→act 循环 2 轮，最终消息 6 条
 
 ⑥ 与书稿的差异

@@ -20,8 +20,8 @@
    - 包：openai>=1.x（本机实测 3.3.0）；--mock 模式零依赖（除 openai 的异常类型）
    - 服务：DEEPSEEK_API_KEY（base_url 指向 api.deepseek.com）；无 key 时只能走 --mock
 
-⑤ 实测解释器 + 日期
-   python（Python 3.10.12 / openai 3.3.0）· 
+⑤ 实测解释器
+   python（Python 3.10.12 / openai 3.3.0）
    实测：--mock rc=0（2 次工具调用 → 最终答案，3 轮，max_turns 未触发）；
          真调模型未跑：缺 DEEPSEEK_API_KEY
 

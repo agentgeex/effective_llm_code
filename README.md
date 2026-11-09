@@ -73,6 +73,7 @@ python ch03/api_call_deepseek.py
 ├── common/                多章复用的公共模块（数据库、日志、GPT 封装等）
 ├── config/                配置读取（真值文件不入库，只有 example）
 ├── ecosystem/             生态示例（DSPy、Gemini Live）
+├── tools/                手动安装脚本（spaCy 中文模型，见 ENV_MATRIX §9）
 ├── INDEX.md               章节 ↔ 文件对照（最有用的一张表）
 ├── ENV_MATRIX.md          四个解释器 / 逐文件依赖实测
 └── pyproject.toml         依赖声明
@@ -111,6 +112,7 @@ python ch03/api_call_deepseek.py
 5. **示例里的参数、阈值、领域数据都是教学示意**，不能当生产配置或操作规程用。
 6. **`outputs/` 不入库**：自己跑一遍就有了。仓库里没有「已经跑好的结果」，因为结果应该由你在你的机器上产生。
 7. **还有 11 个示例没补齐六行文件头**：`ch02/model_run.py`、`ch02/openai_test.py`、`ch06/rag_hyde_rrf.py`、`ch06/torch_env_check.py`、`ch06/transformers_config.py`、`ch07/function_calling_demo.py`、`ch07/stock_server.py`、`ch07/task_server.py`、`ch07/weather_server.py`、`config/cfg.py`、`ecosystem/gemini_demo/gemini_live_api.py`。它们能跑，但头里缺 ⑤ 实测解释器 —— 这个不能靠猜，等逐个真跑过再补。
+8. **spaCy 中文模型要手动装，而且会被 `uv sync` 删掉。** `zh_core_web_sm` / `zh_core_web_lg` 是 GitHub Release 的 wheel（不在 PyPI）。写进 `pyproject.toml` 的话，因为 `uv lock` 会把所有分组一起解析，**任何**一次 `uv sync --extra X` 都变成「先得能访问 GitHub」。所以它们被移到了 `tools/install_spacy_models.sh`。顺序是「先 `uv sync`，再装模型」；之后再 sync 又没了，重装一次即可。
 
 ## 七、许可
 

@@ -29,7 +29,7 @@
 ④ 依赖：`requests`（无 SDK）；需要外网可达 `api.deepseek.com`；需要有效的
    `DEEPSEEK_API_KEY`。无模型权重、无本地服务。
 
-⑤ 实测解释器 + 日期：`python（需 onnxruntime + torch 的环境）`（requests 2.34.2 / Python 3.11.15），
+⑤ 实测解释器：`python（需 onnxruntime + torch 的环境）`（requests 2.34.2 / Python 3.11.15），
     共实跑 5 次（下面前 3 次是改注释前的原始记录；改完后无 key / 假 key 各复跑 1 次，结果完全一致）：
      1) 无 key（venv-onnx）→ rc=2，stderr 原文：
         `缺少环境变量 DEEPSEEK_API_KEY：请先 export DEEPSEEK_API_KEY=<你的 key>`

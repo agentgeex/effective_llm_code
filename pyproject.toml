@@ -101,19 +101,15 @@ nlp = [
     "pkuseg",
     # spaCy 中文分词器后端（zh_core_web_sm/lg 的 pkuseg_update_user_dict 依赖它）
     "spacy-pkuseg",
-    # spaCy 中文小模型（12MB）。不声明的话 `uv sync` 会把它当多余包删掉，
-    # 读者随后就撞 `OSError: [E050] Can't find model 'zh_core_web_sm'`。
-    # 注意：这是 github release 的 wheel（spaCy 官方模型不在 PyPI），首次 lock/sync 需要能访问 github。
-    "zh-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/zh_core_web_sm-3.8.0/zh_core_web_sm-3.8.0-py3-none-any.whl",
-]
-# ── spaCy 中文大模型单独一组，为什么不并进 nlp ──
-# 这一个 wheel 575MB，而它只被 nlp/spacy/t2.py 一个教学正片文件硬依赖。
-# 并进 nlp 组 = 让所有装 `--extra nlp` 的读者为 1 个文件多付 575MB，账不划算。
-# 所以单列：要跑 t2.py 的人装 `--extra nlp --extra nlp-model`，只要分词的人只装 nlp。
-# 不装 zh_core_web_trf（450MB + spacy-transformers + torch 约 2GB）—— 那会让 nlp 组
-# 事实上变成 GPU 依赖，读者要下 3GB，不可接受。用 trf 的 5 个示例一律留 B。
-nlp-model = [
-    "zh-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/zh_core_web_lg-3.8.0/zh_core_web_lg-3.8.0-py3-none-any.whl",
+    # ── spaCy 官方中文模型不在这里声明，原因见下 ──
+    # zh_core_web_sm（12MB）/ zh_core_web_lg（575MB）都是 github release 的 wheel，
+    # 而 `uv lock` 会把**所有** optional-dependencies 分组一起解析 —— 只要写进任何一组，
+    # 读者即使只想 `uv sync --extra core`（numpy / pandas / openai，全在 PyPI），
+    # 也必须先能访问 github 才拿得到这两个 wheel 的元数据。国内网络这一步常常直接断。
+    # 所以改成手动安装：tools/install_spacy_models.sh
+    # 代价：`uv sync` 会把它们当多余包删掉 —— 顺序是「先 sync，再装模型」；之后又 sync 就再装一次。
+    # 不装 zh_core_web_trf（450MB + spacy-transformers + torch 约 2GB）：那会让 nlp 组
+    # 事实上变成 GPU 依赖，读者要下 3GB，不可接受。用 trf 的示例一律留 B。
 ]
 # ecosystem/ 目录下对应书稿第 6 章「技术生态」与第 9 章 Agent 框架的示例
 # accelerate 不放这里：它依赖 torch，跟随 gpu 组

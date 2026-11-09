@@ -18,8 +18,8 @@
    - 包：零（标准库 concurrent.futures / time）
    - 服务：无。call_tool 是本地假实现，不调外部 API
 
-⑤ 实测解释器 + 日期
-   python（Python 3.10.12）· 
+⑤ 实测解释器
+   python（Python 3.10.12）
    实测 rc=0，输出（原样）：
        [书稿版] get_weather {'city': '北京'} → {'location': '北京'}
        [书稿版] 未知工具/未配置键原样透传：{'foo': 'bar'} → {'foo': 'bar'}

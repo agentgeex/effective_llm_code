@@ -1,0 +1,158 @@
+[project]
+name = "ai-study"
+version = "0.1.0"
+description = "《有效的大模型》配套代码"
+requires-python = ">=3.10,<3.12"
+dependencies = []
+
+# 依赖分组：按需安装，不追求一次装全。
+# 版本号暂不锁 —— 先保证「能装上、能跑通」，锁版本留到阶段 3 逐个验证后再说。
+[project.optional-dependencies]
+core = [
+    "numpy",
+    "pandas",
+    "requests",
+    "jieba",
+    "python-docx",
+    "openai",
+    "mcp",
+    "python-dotenv",
+    "pypinyin",
+    "fastmcp",
+    "pyotp",
+    "aiohttp",
+    # ch04/safetensors_read.py 直接 import safetensors；
+    # 它本来就是 transformers 的传递依赖，但直接 import 就该直接声明。
+    "safetensors",
+]
+cases_cv = [
+    # ch11 cases/virtual_tutor（sklearn 做 TF-IDF 检索）与 cases/video_probe（cv2 读帧）
+    # 装了之后 video_probe 与 finetune 的预处理脚本都能跑通
+    "scikit-learn",
+    "opencv-python-headless",
+    # ocr_frames.py 的 OCR 真识别分支：pytesseract 是壳，本体要 apt 装
+    #   sudo apt-get install -y tesseract-ocr tesseract-ocr-chi-sim   （≈15MB，需 root）
+    # 缺系统本体时只出「未实现」报告，不会假报成功。
+    "pytesseract",
+]
+gpu = [
+    "torch",
+    "transformers",
+    "datasets",
+    "accelerate",
+    "diffusers",
+    # 4bit/8bit 量化加载（书 §2.4 load_in_4bit）与 QLoRA 必需；缺了只报 ModuleNotFoundError
+    "bitsandbytes",
+    # LoRA/QLoRA 训练（书 11.3 节，cases/finetune/train_lora.py）
+    "peft",
+    # torch.onnx.export 与 onnxruntime 推理（书 §4.4，见 ch04/onnx_*.py）
+    # onnxruntime 版本上限见文件末尾 constraint-dependencies
+    "onnx",
+    "onnxruntime",
+    # ch04/onnx_m.py 要 optimum 的 ORT 执行器
+    # ⚠️ 但 optimum[onnxruntime] 依赖 huggingface-hub>=1.0，与 transformers 4.x 的 <1.0 冲突
+    #    → 这 3 个脚本在本环境仍是 B（ImportError: cannot import name 'resolve_revision'）
+    #    要跑就单开 venv，别在这里化解冲突
+    "optimum",
+]
+vllm = [
+    "vllm>=0.10",
+]
+rag = [
+    "sentence-transformers",
+    "pymilvus",
+    "chromadb",
+    "langchain",
+    "langchain-community",
+    "langchain-text-splitters",
+]
+# ch11 cases/stock_agent 的行情采集（fetch_data.py）
+# akshare 走东财/新浪公开接口，yfinance 走 Yahoo —— 两个都**需要外网**，离线环境下这一组必 B
+cases_data = [
+    "akshare",
+    "yfinance",
+]
+common = [
+    "pymysql",
+    "dbutils",
+    "redis",
+    "coloredlogs",
+    "jinja2",
+    "flask",
+    "pillow",
+    "python-dateutil",
+    # 阶段 2-A 新增：fastapi 示例（fastapi/fastapi_main.py）、tree_sitter 解析示例（parsercode/）
+    "fastapi",
+    "uvicorn",
+    "tree_sitter",
+    "tree_sitter_c_sharp",
+    # 阶段 3-A 新增：PDF/文档解析（llm_doc/pymupdf4llm_main.py）
+    # 必须 <2：PyPI 上的 pymupdf4llm 2.0 是空壳包（无模块/无依赖/无元数据），装上也 import 不到
+    "pymupdf4llm<2",
+]
+nlp = [
+    "spacy",
+    "jieba3",
+    "jiagu",
+    "pangu",
+    "hanlp_restful",
+    # 阶段 3-A 新增：中文分词（nlp/spacy/pkuseg_t.py、spacy_pkuseg_t.py、temp/intention_t/*pkuseg*.py）
+    # pkuseg 从 sdist 构建，需要 build 环境里有 numpy → 见下方 extra-build-dependencies
+    "pkuseg",
+    # spaCy 中文分词器后端（zh_core_web_sm/lg 的 pkuseg_update_user_dict 依赖它）
+    "spacy-pkuseg",
+    # spaCy 中文小模型（12MB）。不声明的话 `uv sync` 会把它当多余包删掉，
+    # 读者随后就撞 `OSError: [E050] Can't find model 'zh_core_web_sm'`。
+    # 注意：这是 github release 的 wheel（spaCy 官方模型不在 PyPI），首次 lock/sync 需要能访问 github。
+    "zh-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/zh_core_web_sm-3.8.0/zh_core_web_sm-3.8.0-py3-none-any.whl",
+]
+# ── spaCy 中文大模型单独一组，为什么不并进 nlp ──
+# 这一个 wheel 575MB，而它只被 nlp/spacy/t2.py 一个教学正片文件硬依赖。
+# 并进 nlp 组 = 让所有装 `--extra nlp` 的读者为 1 个文件多付 575MB，账不划算。
+# 所以单列：要跑 t2.py 的人装 `--extra nlp --extra nlp-model`，只要分词的人只装 nlp。
+# 不装 zh_core_web_trf（450MB + spacy-transformers + torch 约 2GB）—— 那会让 nlp 组
+# 事实上变成 GPU 依赖，读者要下 3GB，不可接受。用 trf 的 5 个示例一律留 B。
+nlp-model = [
+    "zh-core-web-lg @ https://github.com/explosion/spacy-models/releases/download/zh_core_web_lg-3.8.0/zh_core_web_lg-3.8.0-py3-none-any.whl",
+]
+# ecosystem/ 目录下对应书稿第 6 章「技术生态」与第 9 章 Agent 框架的示例
+# accelerate 不放这里：它依赖 torch，跟随 gpu 组
+ecosystem = [
+    "google-genai",
+    "dspy",
+    "langgraph",
+    "crewai",
+    # 统一多模型调用层（书 7.1.4 节；openai/litellm_t/ 下示例依赖）
+    "litellm",
+    # 模型评测（书 5.3.4 节；evalscope_1/train.py 依赖）
+    "evalscope",
+    # 火山方舟 SDK（common/gpt/volcengine.py）；缺 AK/SK 时脚本报
+    # AssertionError: you need to support api_key or ak&sk —— 属 B，不是缺包
+    "volcengine-python-sdk",
+]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "robotframework",
+]
+
+# 本仓库只是书稿配套示例集合，不是一个可安装的包：
+# 声明 package = false，`uv run` 不会尝试构建并安装本目录。
+[tool.uv]
+package = false
+# onnxruntime 1.24.x 只发 cp311 轮子，本仓库锁 Python 3.10 → 钉在 1.23 及以下
+# （crewai 会经 chromadb 这条链引入 onnxruntime）
+constraint-dependencies = [
+    "onnxruntime<1.24",
+    # ── 三条硬约束（详见 ENV_MATRIX.md §8.5）──
+    # transformers 5.x 删了 AutoModelForVision2Seq，model/model_parser*.py 三个文件直接 ImportError
+    "transformers<5",
+    # transformers 4.x 要求 huggingface-hub>=0.34,<1.0；升到 2.x 会让 transformers 起不来
+    "huggingface-hub<1.0",
+    # diffusers 0.42 要 hub>=1.0（resolve_revision），与上面冲突 → diffusers 示例保持 B，
+    # 要跑就单开 venv，别为了它把 transformers 拖下水
+]
+# pkuseg 是 sdist 包（0.0.25），构建时要 import numpy；只加 --no-build-isolation 不够友好，
+# 这里把 numpy 塞进它的构建环境，让 `uv sync --extra nlp` 能直接装。
+extra-build-dependencies = { pkuseg = ["numpy"] }

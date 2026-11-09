@@ -1,0 +1,38 @@
+{
+  "_comment": "本文件是全占位符模板，入库；真实值请复制为 config/config.json（已被 .gitignore 忽略）。读取顺序：环境变量 > config/config.json > 本文件。",
+
+  "db": {
+    "mysql": {
+      "db": {
+        "host": "your_mysql_host_here",
+        "port": 3306,
+        "username": "your_mysql_user_here",
+        "passwd": "REPLACE_ME_MYSQL_PASSWORD",
+        "database": "your_database_name_here",
+        "charset": "utf8",
+        "ifusrpool": 1,
+        "pool_size": 10
+      }
+    },
+    "redis": {
+      "db": {
+        "host": "127.0.0.1",
+        "port": 6379,
+        "passwd": "REPLACE_ME_REDIS_PASSWORD",
+        "max_connections": 10,
+        "if_unix_socker": 0
+      }
+    }
+  },
+
+  "adminusers": "1001,1002",
+
+  "sys": {
+    "mail": {
+      "smtp_user": "your_smtp_user_here",
+      "smtp_passwd": "REPLACE_ME_SMTP_PASSWORD",
+      "smtp_server": "smtp.example.com",
+      "smtp_port": 587
+    }
+  }
+}

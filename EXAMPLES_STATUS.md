@@ -21,7 +21,7 @@
 
 | 归类 | 个数 |
 |---|---|
-| ✅ 跑通 | 24 |
+| ✅ 跑通 | 25 |
 | ✅ 跑通（用文档给的参数） | 7 |
 | 🔁 常驻服务（已探活） | 1 |
 | 📄 示意代码（按设计不执行） | 2 |
@@ -31,14 +31,13 @@
 | 🌐 缺外部服务 | 1 |
 | 🖥 缺驱动/系统组件 | 2 |
 | 📚 缺包（extras 里没有） | 4 |
-| 🐞 代码与当前 API 不匹配 | 1 |
 | 🧱 缺前置产物 | 1 |
 | 🧩 库模块（非可执行脚本） | 17 |
 | 🧩 库模块（import 需外部条件） | 5 |
 | **合计** | **82** |
 
-能真正跑出结果的：**32** 个（✅ 跑通 24 + 用文档参数 7 + 常驻服务探活 1）。
-剩下 50 个里，25 个是**环境/凭证不够**，1 个是**代码配的是旧版 torch 的 API**，2 个是**本来就是示意代码**，22 个是**库模块、不是可执行脚本**。
+能真正跑出结果的：**33** 个（✅ 跑通 25 + 用文档参数 7 + 常驻服务探活 1）。
+剩下 49 个里，25 个是**环境/凭证不够**，2 个是**本来就是示意代码**，22 个是**库模块、不是可执行脚本**。
 
 ### 三种「没跑通」必须分清
 
@@ -71,7 +70,7 @@
 | `ch04/model_architectures.py` | `2` | 📦 缺模型权重 | `bert\|gpt\|t5` → 裸跑 rc=2 要子命令；子命令要 bert-base-chinese / Qwen2.5 / t5 权重（要外网） |
 | `ch04/model_parser_c.py` | `1` | 📦 缺模型权重 | 模型路径仍是占位 `/path/to/your/motogpt/...` |
 | `ch04/model_run.py` | `1` | 📦 缺模型权重 | 模型路径仍是占位 `/path/to/your/motogpt/...` |
-| `ch04/onnx_export_min.py` | `1` | 🐞 缺包（已补）/ 代码问题（待定） | `export` → 补上 `onnxscript` 后不再 ImportError，改报 `ValueError: conflicts between user-specified ranges and inferred ranges … Dim.DYNAMIC … inputs['input_ids'].shape[1]`：torch 2.9 起默认走 dynamo 导出，不再接受 `dynamic_axes`。加一行 `dynamo=False` 即可导出成功（已在 /tmp 副本验证 rc=0），但**没有改仓库文件**，等定。详见文末「需要你知道的两件事」 |
+| `ch04/onnx_export_min.py` | `0` | ✅ 跑通 | `export` → rc=0（11 MB .onnx）；`check` → rc=0；`infer` → rc=0，输出 shape (1, 5)。已显式 `dynamo=False` 走 legacy 导出器，以保持与书稿的 `dynamic_axes` 写法一致；`check` 子命令改调 `onnx.checker.check_model`（旧的 `python -m onnx.checker` 是假校验，详见文末第 1 条） |
 | `ch04/onnx_m.py` | `1` | 📚 缺包（**故意不补**） | `optimum` 2.3 把 ONNX Runtime 执行器拆成了独立包；装它要 `huggingface-hub>=1.0`，与 `transformers<5` 冲突。保持 `transformers<5` 优先 |
 | `ch04/safetensors_read.py` | `0` | ✅ 跑通 | 自造 safetensors 文件并 mmap 读回，tensor (8,8)，临时目录自清 |
 | `ch04/transformer_min.py` | `0` | ✅ 跑通 | 手写单头自注意力，CPU 跑完（本机 CUDA 不可用） |
@@ -251,38 +250,44 @@ NVIDIA 驱动 **≥ 580**；本机 550.90.07 只能到 CUDA 12.4。结果：所�
 
 ## 需要你知道的两件事
 
-### 1. `ch04/onnx_export_min.py`：补了包，但还没跑通，卡在 torch 换了默认导出器
+### 1. `ch04/onnx_export_min.py`：能跑了，但走的是 legacy 导出器
 
-改前（`gpu` 组里没有 `onnxscript`）：
+这个文件踩了两层，都修了。
 
-```
-ModuleNotFoundError: No module named 'onnxscript'          → rc=1
-```
+**第一层（缺包）**：`gpu` 组原先没声明 `onnxscript`，torch 2.11 的 `torch.onnx.export`
+直接 `ModuleNotFoundError`。已补进 `pyproject.toml`。
 
-补上 `onnxscript` 之后，ImportError 没了，但撞到下一层 —— torch 2.9 起
-`torch.onnx.export` 默认换成 dynamo 导出器，**不再接受 `dynamic_axes` 这种老式写法**：
+**第二层（API 换代）**：torch 2.9 起默认换成 dynamo 导出器，**不再接受书稿教的 `dynamic_axes`**：
 
 ```
 ValueError: Found the following conflicts between user-specified ranges and
 inferred ranges from model tracing:
 - Received user-specified dim hint Dim.DYNAMIC(min=None, max=None), but tracing
   inferred a static shape of 50 for dimension inputs['input_ids'].shape[1].
-                                                                   → rc=1
 ```
 
-这不是环境缺东西，是**文件里的导出写法配的是 torch 2.6 那套 API**。加一行
-`dynamo=False` 退回旧（TorchScript）导出器就能过 —— 我在 `/tmp` 的副本上验证过：
+修法：显式 `dynamo=False` 退回 legacy（TorchScript）导出器。**因为书稿正文讲的就是
+`dynamic_axes`** —— 仓库的首要义务是和书对得上，不是用上最新 API。
+代价写进文件头 ⑥：legacy 导出器 torch 官方已标记为旧路径、将来会移除。
+
+**顺带修掉一个更隐蔽的问题：文件头那条「校验」是假的。**
 
 ```
-ONNX 模型已导出: /tmp/text_classifier.onnx     （11 MB）
-infer → 输出 shape: (1, 5)                     → rc=0
+$ python -m onnx.checker /tmp/definitely_missing.onnx
+RuntimeWarning: 'onnx.checker' found in sys.modules ...
+rc=0                       ← 文件不存在也 rc=0
 ```
 
-⚠️ **仓库文件没有动。** 改不改 `ch04/onnx_export_min.py` 是另一个决定，等定。
+onnx 1.23 上 `python -m onnx.checker <file>` 什么都不检查。文件头 ③ 里那句「校验」
+从来没校验过任何东西 —— **以前谁拿它当「导出成功」的证据，那个证据是假的**。
 
-顺带一个发现：文件头里写的校验命令 `python -m onnx.checker text_classifier.onnx`
-在 onnx 1.23 上**什么都不检查**（给一个不存在的路径也是 rc=0，只吐一行 runpy 警告）。
-这条命令的校验作用是假的，别拿它当证据。
+现在改成 `check` 子命令，走 `onnx.checker.check_model(onnx.load(path))`。对照：
+
+| 输入 | 命令 | rc |
+|---|---|---|
+| 真导出的 `.onnx` | `onnx_export_min.py check` | **0**（`ONNX 校验通过`） |
+| 文本冒充 `.onnx` | 同上 | **1**（`DecodeError: Wire format was corrupt`） |
+| 不存在的路径 | 旧的 `-m onnx.checker` | **0**（假绿） |
 
 ### 2. `ch04/onnx_m.py`：这个「缺包」是**故意不补**的
 
@@ -297,11 +302,9 @@ infer → 输出 shape: (1, 5)                     → rc=0
 
 ## 关于「代码 bug」
 
-**一个：`ch04/onnx_export_min.py`** —— 不是逻辑写错，是**写法配的是 torch 2.6 那套 API**：
-`torch.onnx.export(..., dynamic_axes=...)` 在 torch 2.9+ 的默认 dynamo 导出器下会被拒。
-补 `dynamo=False` 即可（`/tmp` 副本实测 rc=0），但仓库文件未动，等决定。见上一节。
+**0 个。** 82 个文件里没有「逻辑写错导致跑不出来」的。
 
-另外 81 个文件没有「逻辑写错导致跑不出来」的问题。
+`ch04/onnx_export_min.py` 那个已修（`dynamo=False` + 真校验），修完 export / check / infer 三步 rc 全 0。
 
 顺带一提的写法（不算 bug）：`common/db/redis/redistest.py:5` 是 `from Redis import Redis`，
 依赖「文件同目录在 `sys.path` 上」。用 `PYTHONPATH=.` 从仓库根导入就会报

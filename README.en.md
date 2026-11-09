@@ -18,7 +18,7 @@ This is the example-code repository for the book *有效的大模型* ("Effectiv
 
 So the trade-off we settled on is **better to cover less than to mislead**:
 
-- Every example file opens with a six-line header comment: what it does, which section of the book it belongs to, how to run it, what it depends on, which interpreter it was actually tested with, and how it differs from the book.
+- **Most example files open with a six-line, fixed-structure header comment** (50 of the 82 `.py` files carry this ①–⑥ numbering; the 21 under `common/` are shared modules, not examples. Eleven examples still lack it — they're listed in section 6): what it does, which section of the book it belongs to, how to run it, what it depends on, which interpreter it was actually tested with, and how it differs from the book.
 - Examples that can't run are not deleted. They're labelled with **what's missing** (VRAM, API key, external service, model weights) and with a fallback path.
 - Every parameter, threshold and dataset inside the examples is **illustrative, for teaching** — not production configuration, and certainly not an operating procedure.
 
@@ -27,14 +27,27 @@ So the trade-off we settled on is **better to cover less than to mislead**:
 First example: **no API key, no GPU required**:
 
 ```bash
-# 1) install dependencies (uv recommended; pip works too)
-uv sync                      # or: pip install -e .
+# 1) first example: installs nothing, needs no key, needs no GPU (takes ~30s — it really does wait 30s)
+python3 ch10/concurrency_vs_serial.py
 
-# 2) run a purely local example: self-attention from scratch
-python ch04/transformer_min.py
+# 2) install dependencies — note: this repo's dependency list is empty, so you must name a group; uv sync on its own installs nothing
+uv sync --extra core          # numpy / pandas / openai / jieba … pure-Python wheels, no GPU
 
-# 3) want to know what a given file does and how to run it
-python -c "print(open('INDEX.md').read())"   # or just open INDEX.md
+# 3) want to run the hand-written self-attention example (only torch is missing)
+uv pip install torch
+.venv/bin/python ch04/transformer_min.py
+```
+
+What each step is for:
+
+1. **Step 1 has zero dependencies.** It uses only the standard library (`asyncio` / `time`), so there is nothing to install first — confirm that the code in this repo really does run on your machine before we talk about environments at all. It runs a hundred work orders three ways (serial, 10-way concurrent, fully concurrent) and quantifies the difference between per-task latency and overall throughput.
+2. **`uv sync` installs nothing by default.** `pyproject.toml` here has `dependencies = []`; every dependency lives in a named group (`core` / `gpu` / `vllm` / `nlp` / `rag` …). Run it without `--extra` and you get an empty environment — and no message telling you it installed nothing.
+3. **For a torch example, add the one package — don't reach for `--extra gpu`.** That group also drags in `onnx` / `onnxruntime` / `optimum` / `bitsandbytes` / `diffusers`: several GB, for one self-attention demo that runs on CPU anyway. Take what you need, when you need it.
+
+To find out what a given file does and how to run it:
+
+```bash
+python3 -c "print(open('INDEX.md').read())"   # or just open INDEX.md
 ```
 
 To run an example that needs a key (e.g. `ch03/api_call_deepseek.py`):
@@ -72,7 +85,7 @@ Two steps:
 1. Open [INDEX.md](INDEX.md), find the file under your chapter — one line per file, describing what it does.
 2. Before running it, check that file's row in [ENV_MATRIX.md](ENV_MATRIX.md) — **the package set it needs may not be the same one the file next to it needs.**
 
-Every `.py` file also carries a six-line structured header comment, so you can just read the file:
+Most `.py` files also carry this six-line header, so you can just read the file:
 
 ```
 ① What it is      ② Chapter/section      ③ How to run
@@ -97,6 +110,7 @@ The honest part:
 4. **The video case study needs sample footage.** The repo ships synthetic test clips, not real recordings.
 5. **Parameters, thresholds and domain data in the examples are illustrative.** Don't use them as production configuration or as operating procedures.
 6. **`outputs/` is not committed**: run an example once and you'll have it. There are no "pre-computed results" in the repo, because the results are supposed to be produced on your machine, by you.
+7. **Eleven examples still lack the six-line header**: `ch02/model_run.py`, `ch02/openai_test.py`, `ch06/rag_hyde_rrf.py`, `ch06/torch_env_check.py`, `ch06/transformers_config.py`, `ch07/function_calling_demo.py`, `ch07/stock_server.py`, `ch07/task_server.py`, `ch07/weather_server.py`, `config/cfg.py`, `ecosystem/gemini_demo/gemini_live_api.py`. They run, but their headers are missing ⑤ the tested interpreter — that can't be guessed, so it waits until each one has actually been run.
 
 ## 7. License
 

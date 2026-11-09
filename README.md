@@ -18,7 +18,7 @@
 
 所以这个仓库的取舍是**宁可少，不骗人**：
 
-- 每个示例文件头部有六行注释：这是干什么的、对应书哪一节、怎么跑、依赖什么、用什么解释器实测过、和书里有什么差异。
+- **多数示例文件头部有六行固定结构的注释**（82 个 `.py` 里 50 个带这套 ①–⑥ 编号；`common/` 下那 21 个是公共模块，本来就不算示例。还有 11 个示例没补齐，列在第 6 节）：这是干什么的、对应书哪一节、怎么跑、依赖什么、用什么解释器实测过、和书里有什么差异。
 - 跑不了的示例不会被删掉，而是标清楚**缺什么**（显存、API key、外部服务、模型权重），并给出降级路径。
 - 示例代码里出现的参数、阈值、数据都是**教学示意**，不是生产配置，更不是操作规程。
 
@@ -27,14 +27,27 @@
 **不需要 API key、不需要 GPU** 的第一个例子：
 
 ```bash
-# 1) 装依赖（推荐 uv；用 pip 也行）
-uv sync                      # 或者：pip install -e .
+# 1) 第一个例子：不装任何包、不用 key、不用 GPU（跑约 30 秒，它真的在等 30 秒）
+python3 ch10/concurrency_vs_serial.py
 
-# 2) 跑一个纯本地的例子：手写自注意力
-python ch04/transformer_min.py
+# 2) 装依赖 —— 注意：本仓库 dependencies 是空的，必须点名要哪一组，uv sync 本身什么都不装
+uv sync --extra core          # numpy / pandas / openai / jieba … 纯 Python 轮子，不碰 GPU
 
-# 3) 想看某个文件是干什么、怎么跑
-python -c "print(open('INDEX.md').read())"   # 或者直接打开 INDEX.md
+# 3) 想跑「手写自注意力」（只缺 torch 一个包）
+uv pip install torch
+.venv/bin/python ch04/transformer_min.py
+```
+
+三步各自在干什么：
+
+1. **第 1 步零依赖。** 它只用标准库 `asyncio` / `time`，所以不用等任何安装 —— 先确认「这个仓库的代码在我机器上真的跑得动」，再谈装环境。它会把 100 张工单分别用串行、并发 10、全并发跑一遍，直接把「单任务延迟」和「整体吞吐量」的差别量化出来。
+2. **`uv sync` 默认不装任何东西。** 本仓库 `pyproject.toml` 的 `dependencies = []`，依赖全部放在命名分组里（`core` / `gpu` / `vllm` / `nlp` / `rag` …）。不点名 `--extra`，它只会建一个空环境，而且不会告诉你它什么都没装。
+3. **跑 torch 示例只补一个包，别开 `--extra gpu`。** gpu 组会把 `onnx` / `onnxruntime` / `optimum` / `bitsandbytes` / `diffusers` 一起拖下来，几个 GB —— 为了一个在 CPU 上就能跑完的自注意力示例，不值。缺什么装什么。
+
+想知道某个文件是干什么、怎么跑：
+
+```bash
+python3 -c "print(open('INDEX.md').read())"   # 或者直接打开 INDEX.md
 ```
 
 想跑需要 key 的例子（比如 `ch03/api_call_deepseek.py`）：
@@ -72,7 +85,7 @@ python ch03/api_call_deepseek.py
 1. 打开 [INDEX.md](INDEX.md)，按章找文件，每个文件一行「这个文件干什么」。
 2. 想跑之前，再看 [ENV_MATRIX.md](ENV_MATRIX.md) 里这个文件对应的依赖行 —— **它吃的包和别的文件可能不是同一套**。
 
-每个 `.py` 文件头都有六行固定结构的注释，直接看文件也行：
+多数 `.py` 文件头有这套六行注释，直接看文件也行：
 
 ```
 ① 这是什么   ② 对应章节   ③ 怎么跑
@@ -97,6 +110,7 @@ python ch03/api_call_deepseek.py
 4. **视频案例需要样本视频**，仓库里只带合成测试片，不带真实拍摄素材。
 5. **示例里的参数、阈值、领域数据都是教学示意**，不能当生产配置或操作规程用。
 6. **`outputs/` 不入库**：自己跑一遍就有了。仓库里没有「已经跑好的结果」，因为结果应该由你在你的机器上产生。
+7. **还有 11 个示例没补齐六行文件头**：`ch02/model_run.py`、`ch02/openai_test.py`、`ch06/rag_hyde_rrf.py`、`ch06/torch_env_check.py`、`ch06/transformers_config.py`、`ch07/function_calling_demo.py`、`ch07/stock_server.py`、`ch07/task_server.py`、`ch07/weather_server.py`、`config/cfg.py`、`ecosystem/gemini_demo/gemini_live_api.py`。它们能跑，但头里缺 ⑤ 实测解释器 —— 这个不能靠猜，等逐个真跑过再补。
 
 ## 七、许可
 

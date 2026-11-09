@@ -30,19 +30,19 @@ First example: **no API key, no GPU required**:
 # 1) first example: installs nothing, needs no key, needs no GPU (takes ~30s — it really does wait 30s)
 python3 ch10/concurrency_vs_serial.py
 
-# 2) install dependencies — note: this repo's dependency list is empty, so you must name a group; uv sync on its own installs nothing
-uv sync --extra core          # numpy / pandas / openai / jieba … pure-Python wheels, no GPU
+# 2) one command installs the whole environment (about 11 GB / 516 packages on the first run)
+uv sync --all-extras
 
-# 3) want to run the hand-written self-attention example (only torch is missing)
-uv pip install torch
+# 3) hand-written self-attention (runs on CPU; torch is already in that environment)
 .venv/bin/python ch04/transformer_min.py
 ```
 
 What each step is for:
 
 1. **Step 1 has zero dependencies.** It uses only the standard library (`asyncio` / `time`), so there is nothing to install first — confirm that the code in this repo really does run on your machine before we talk about environments at all. It runs a hundred work orders three ways (serial, 10-way concurrent, fully concurrent) and quantifies the difference between per-task latency and overall throughput.
-2. **`uv sync` installs nothing by default.** `pyproject.toml` here has `dependencies = []`; every dependency lives in a named group (`core` / `gpu` / `vllm` / `rag` / `common` …). Run it without `--extra` and you get an empty environment — and no message telling you it installed nothing.
-3. **For a torch example, add the one package — don't reach for `--extra gpu`.** That group also drags in `onnx` / `onnxruntime` / `optimum` / `bitsandbytes` / `diffusers`: several GB, for one self-attention demo that runs on CPU anyway. Take what you need, when you need it.
+2. **Step 2 is one command, not a table.** `uv sync --all-extras` installs every group in `pyproject.toml` at once — torch / transformers / vllm / chromadb / fastmcp / dspy / crewai / langgraph / the Volcengine SDK … 516 packages, about 11 GB. **You don't have to work out which group a given example needs.**
+   Be aware of the cost: the first download is large, and `vllm` pins torch to a **CUDA 13** build (`2.11.0+cu130` as measured here), so **GPU use needs an NVIDIA driver ≥ 580**. On older drivers `torch.cuda.is_available()` is `False`: GPU examples won't run, CPU-only examples are unaffected.
+3. **Step 3 installs nothing more.** torch is already in that environment. (The old "`uv pip install torch` just for one CPU example" step is no longer needed.)
 
 To find out what a given file does and how to run it:
 
@@ -75,7 +75,7 @@ python ch03/api_call_deepseek.py
 ├── ecosystem/             ecosystem demos (DSPy, Gemini Live)
 ├── tools/                 manual install scripts (spaCy Chinese models, see ENV_MATRIX §9)
 ├── INDEX.md               chapter ↔ file mapping (the most useful table in this repo)
-├── ENV_MATRIX.md          four interpreters / per-file dependency measurements
+├── ENV_MATRIX.md          dependency groups, and the author's original measurements
 └── pyproject.toml         dependency declarations
 ```
 
@@ -84,7 +84,6 @@ python ch03/api_call_deepseek.py
 Two steps:
 
 1. Open [INDEX.md](INDEX.md), find the file under your chapter — one line per file, describing what it does.
-2. Before running it, check that file's row in [ENV_MATRIX.md](ENV_MATRIX.md) — **the package set it needs may not be the same one the file next to it needs.**
 
 Most `.py` files also carry this six-line header, so you can just read the file:
 
@@ -93,13 +92,17 @@ Most `.py` files also carry this six-line header, so you can just read the file:
 ④ Dependencies    ⑤ Tested environment    ⑥ Differences from the book
 ```
 
-## 5. Environments are layered (this line will save you half a day)
+## 5. The environment is one command
 
-**The examples here need several mutually incompatible Python environments. Don't expect a single venv to run all of them.**
+```bash
+uv sync --all-extras
+```
 
-The reasons are concrete: `vllm` pins a specific `torch` + CUDA combination, `onnxruntime` needs a `numpy` that conflicts with it, and frameworks like `dspy` want a newer Python. Force them into one environment and you get something that installs but won't run — you'll hit an `ImportError` or a segfault at runtime, and then assume the code is broken.
+516 packages, about 11 GB, every group in `pyproject.toml` included. You don't have to read a "which file needs which group" table — that hands the packing list to the reader.
 
-So: **one environment per example, or one per each of the four groups in ENV_MATRIX.** ENV_MATRIX lists, file by file, which environment each one needs.
+Version conflicts are pinned where they belong, in `pyproject.toml` (`constraint-dependencies`: `transformers<5`, `huggingface-hub<1.0`, `onnxruntime<1.24`), not left for you to solve at install time.
+
+**One known exception**: `unsloth` / `trl` / `torchtext` are not in this environment, because the torch they require directly conflicts with the one `vllm` requires. The three examples that use them (`ch04/unsloth_wt1.py`, `ch06/unsloth_wt1.py`, `ch06/troch_train_c_moe_v1.py`) need a separate environment, installed per each file's header.
 
 ## 6. Known limitations
 
@@ -112,8 +115,9 @@ The honest part:
 5. **Parameters, thresholds and domain data in the examples are illustrative.** Don't use them as production configuration or as operating procedures.
 6. **`outputs/` is not committed**: run an example once and you'll have it. There are no "pre-computed results" in the repo, because the results are supposed to be produced on your machine, by you.
 7. **Eleven examples still lack the six-line header**: `ch02/model_run.py`, `ch02/openai_test.py`, `ch06/rag_hyde_rrf.py`, `ch06/torch_env_check.py`, `ch06/transformers_config.py`, `ch07/function_calling_demo.py`, `ch07/stock_server.py`, `ch07/task_server.py`, `ch07/weather_server.py`, `config/cfg.py`, `ecosystem/gemini_demo/gemini_live_api.py`. They run, but their headers are missing ⑤ the tested interpreter — that can't be guessed, so it waits until each one has actually been run.
-8. **The spaCy Chinese models must be installed by hand, and `uv sync` will delete them.** `zh_core_web_sm` / `zh_core_web_lg` are GitHub Release wheels, not on PyPI. Declaring them in `pyproject.toml` would make **every** `uv sync --extra X` require GitHub access first, because `uv lock` resolves all groups together. They now live in `tools/install_spacy_models.sh`. Order matters: `uv sync` first, then the models; a later sync removes them again, so run the script once more.
-9. **`unsloth` / `trl` / `torchtext` are deliberately absent from extras.** The code does import them (`ch04/unsloth_wt1.py`, `ch06/unsloth_wt1.py`, `ch06/troch_train_c_moe_v1.py`), but they fight with the torch pin in the `gpu` group — declaring them would just make every `--extra gpu` user carry another unbuildable package. To run those examples, install manually per each file's header.
+8. **The spaCy Chinese models must be installed by hand, and `uv sync` will delete them.** `zh_core_web_sm` / `zh_core_web_lg` are GitHub Release wheels, not on PyPI. Declaring them in `pyproject.toml` would make **every** `uv sync` (including `--all-extras`) require GitHub access first, because `uv lock` resolves all groups together. They now live in `tools/install_spacy_models.sh`. Order matters: `uv sync` first, then the models; a later sync removes them again, so run the script once more.
+9. **Only 32 of the 82 files actually produce a result on this machine.** No hedging in that number: 24 run outright, 7 run with the arguments their headers document (`--mock` / `--stub` / a subcommand), 1 is a long-running service verified by probing it. Of the other 50: 26 lack a key, weights, an external service, a package, or a new enough driver; 2 are illustrative code by design; 22 are library modules under `common/` and `config/` with no `__main__`.
+10. **`unsloth` / `trl` / `torchtext` are deliberately absent from extras.** The code does import them (`ch04/unsloth_wt1.py`, `ch06/unsloth_wt1.py`, `ch06/troch_train_c_moe_v1.py`), but they fight with the torch pin in the `gpu` group — declaring them would break `uv sync --all-extras` for everyone. To run those examples, install manually per each file's header; [ENV_MATRIX.md](ENV_MATRIX.md) §10 keeps the evidence behind that decision.
 
 ## 7. License
 

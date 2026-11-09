@@ -89,7 +89,7 @@ common = [
 # ── spaCy 中文模型（zh_core_web_sm / zh_core_web_lg）不在 extras 里 ──
 # 它们是 github release 的 wheel（不在 PyPI）。而 `uv lock` 会把**所有**
 # optional-dependencies 分组一起解析 —— 只要写进任何一组，读者即使只想
-# `uv sync --extra core`，也必须先能访问 github 才拿得到它们的元数据。
+# `uv sync --all-extras`，也必须先能访问 github 才拿得到它们的元数据。
 # 所以改成手动安装：tools/install_spacy_models.sh（用法见 ENV_MATRIX §9）。
 # 注意：`uv sync` 会把不在本文件里的包当多余删掉，顺序是「先 sync，再装模型」。
 # ecosystem/ 目录下对应书稿第 6 章「技术生态」与第 9 章 Agent 框架的示例

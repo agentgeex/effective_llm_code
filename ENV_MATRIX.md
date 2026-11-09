@@ -1,11 +1,34 @@
-# ENV_MATRIX — 哪个解释器跑哪些示例
+# ENV_MATRIX — 依赖环境说明
 
-> 一句话：**本仓库没有一个环境能跑全部示例，这是有意的分层，不是没装好。**
-> ONNX 环境只装推理链（torch/onnx/transformers），MCP 环境只装协议链（mcp/fastmcp）。
-> 别试图把它们合并成一个大环境 —— torch 与 transformers 的版本要求和 mcp 2.x 的依赖树会互相拉扯，
-> 合并的代价远大于收益。
+## 0. 读者只需要一条命令
 
-本文所有数字都是 **在本机实测** 的，命令与输出见文末「§5 取证」。
+```bash
+uv sync --all-extras
+```
+
+装完 **516 个包、约 11 GB**（uv 0.11.7 实测，rc=0），`pyproject.toml` 里所有分组都在里面。
+不需要判断「这个例子要哪一组」—— 那件事不该由读者做。
+
+版本冲突已经在 `pyproject.toml` 的 `constraint-dependencies` 里钉死
+（`transformers<5` / `huggingface-hub<1.0` / `onnxruntime<1.24`）。
+**唯一需要另开环境的是 `unsloth` / `trl` / `torchtext`**，理由见 §10。
+
+> ⚠️ 大环境里 `vllm` 会把 torch 定到 CUDA 13 构建（实测 `2.11.0+cu130`），
+> **GPU 需要 NVIDIA 驱动 ≥ 580**。驱动更老时 `torch.cuda.is_available()` 为 `False`，
+> GPU 示例跑不了，纯 CPU 示例不受影响。
+
+---
+
+<details>
+<summary><b>附录：作者机器上的历史取证（多解释器时代，与读者无关，保留备查）</b></summary>
+
+下面 §1–§8 是**早期按「一个例子一个环境」折腾时**在作者机器上留下的实测记录：
+`.venv` / `.venv-core` / `venv-onnx` / `venv-gpu` / `venv-vllm` 五个解释器的逐包版本、
+目录名遮蔽 PyPI 包的坑、以及当时那些「合并会打架」的取证。
+
+**读者用不上这些。** 保留它们只为一件事：将来有人问「为什么当初不合并」，
+这里躺着当时的原始输出。注意里面的文件数是**当时的口径**（92 个 `.py`），
+现在的发布仓是 82 个。
 
 ---
 
@@ -316,7 +339,6 @@ git ls-files -z                     # 取全量（-z 处理中文路径）
 **那个环境现在不在**。按当前四个解释器判，它们「四个都不行」。
 两个说法都对，区别是「曾经能跑」与「现在这台机器上能跑」。读者要跑得自己补 `peft`/`sklearn`。
 
-
 ---
 
 ## 7. 拿一把真实 key 逐个实跑：16 个 API 示例通了 15 个
@@ -525,13 +547,17 @@ $ python（需 vllm 的环境） -c "import vllm,torch;print(vllm.__version__,to
 
 ---
 
+</details>
+
+---
+
 ## 9. spaCy 中文模型：手动装，不在 `pyproject.toml` 里
 
 `zh_core_web_sm`（约 12MB）和 `zh_core_web_lg`（约 575MB）是 **GitHub Release 的 wheel**，不在 PyPI。
 
 它们原本声明在 `pyproject.toml` 的 `nlp` / `nlp-model` 两个 extra 里。问题出在：
 **`uv lock` 会把所有 `optional-dependencies` 分组一起解析**，不管你实际要装哪一组。
-于是读者只想 `uv sync --extra core`（numpy / pandas / openai，全在 PyPI），
+于是读者只想 `uv sync --all-extras`（其余包全在 PyPI），
 也必须先能访问 GitHub 才拿得到这两个 wheel 的元数据 —— 国内网络这一步常常直接断，
 `uv sync` 只会给你一句 70 秒左右超时，看不出问题出在一个你根本没要装的包上。
 
@@ -572,7 +598,7 @@ bash tools/install_spacy_models.sh both    # 两个都装
 | `torchtext` | `ch06/troch_train_c_moe_v1.py` | 该文件自己的注释就写着 ABI 不匹配、`undefined symbol` |
 
 **决定：不声明。** 理由很直接 —— 这两个 `unsloth_wt1.py` 本来就是 B（文件头写着本轮未能跑通），
-把它们塞进 `gpu` 组，等于让所有 `uv sync --extra gpu` 的读者为一个多半跑不起来的示例，
+把它们塞进 `gpu` 组，等于让每个跑 `uv sync --all-extras` 的读者为一个多半跑不起来的示例，
 多背一个版本冲突的包，甚至把整个 `gpu` 组拖到装不上。
 
 要跑这几个示例，按各自文件头的说明手动装。**说清楚比假装声明了更有用。**

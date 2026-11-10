@@ -6,6 +6,8 @@ Every technique the book walks through has code here that either runs, or says p
 The code is organised by book chapter: `ch01/` – `ch14/`.
 **The chapter ↔ file mapping is in [INDEX.md](INDEX.md)** — that single table is where you look things up, by chapter or by file. *(Heads-up: INDEX.md, ENV_MATRIX.md and the per-chapter READMEs are currently Chinese-only. The tables are structural enough to navigate, and the code plus its header comments are self-explanatory.)*
 
+**📖 Read the whole book online: [https://effective-gpt.pages.dev/](https://effective-gpt.pages.dev/)** — the web edition is searchable.
+
 > No demo video, no benchmark leaderboard, no "one-click run". What you get instead: **every claim has reproducible code behind it, and when something doesn't run, we say so.**
 
 ---
